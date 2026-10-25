@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivitiesRouteImport } from './routes/activities'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as MyClubsRouteImport } from './routes/my-clubs'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
@@ -17,6 +18,11 @@ import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivitiesRoute = ActivitiesRouteImport.update({
+  id: '/activities',
+  path: '/activities',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -37,12 +43,14 @@ const ClubsClubIdRoute = ClubsClubIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activities': typeof ActivitiesRoute
   '/admin': typeof AdminRoute
   '/my-clubs': typeof MyClubsRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activities': typeof ActivitiesRoute
   '/admin': typeof AdminRoute
   '/my-clubs': typeof MyClubsRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
@@ -50,20 +58,23 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activities': typeof ActivitiesRoute
   '/admin': typeof AdminRoute
   '/my-clubs': typeof MyClubsRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/my-clubs' | '/clubs/$clubId'
+  fullPaths: '/' | '/activities' | '/admin' | '/my-clubs' | '/clubs/$clubId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/my-clubs' | '/clubs/$clubId'
-  id: '__root__' | '/' | '/admin' | '/my-clubs' | '/clubs/$clubId'
+  to: '/' | '/activities' | '/admin' | '/my-clubs' | '/clubs/$clubId'
+  id:
+    '__root__' | '/' | '/activities' | '/admin' | '/my-clubs' | '/clubs/$clubId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivitiesRoute: typeof ActivitiesRoute
   AdminRoute: typeof AdminRoute
   MyClubsRoute: typeof MyClubsRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
@@ -76,6 +87,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activities': {
+      id: '/activities'
+      path: '/activities'
+      fullPath: '/activities'
+      preLoaderRoute: typeof ActivitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -104,6 +122,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivitiesRoute: ActivitiesRoute,
   AdminRoute: AdminRoute,
   MyClubsRoute: MyClubsRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,

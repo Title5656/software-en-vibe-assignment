@@ -13,6 +13,7 @@ export function SiteHeader() {
           <Link to="/" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }} activeOptions={{ exact: true }}>
             All clubs
           </Link>
+          <Link to="/activities" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>Activities</Link>
           <Link to="/admin" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>Admin</Link>
           <Link to="/my-clubs" className="flex items-center gap-2 text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             My clubs
