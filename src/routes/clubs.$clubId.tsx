@@ -1,22 +1,22 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { getClub } from "@/lib/clubs";
+import { useClubs } from "@/lib/club-store";
 import { addRegistration, removeRegistration, useRegistrations } from "@/lib/registrations";
 import { SiteHeader } from "@/components/SiteHeader";
 
 export const Route = createFileRoute("/clubs/$clubId")({
   loader: ({ params }) => {
     const club = getClub(params.clubId);
-    if (!club) throw notFound();
     return { club };
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: `${loaderData?.club.name ?? "Club"} — MUICT Clubs` },
-      { name: "description", content: loaderData?.club.description ?? "MUICT club" },
-      { property: "og:title", content: `${loaderData?.club.name ?? "Club"} — MUICT Clubs` },
-      { property: "og:description", content: loaderData?.club.tagline ?? "" },
+      { title: `${loaderData?.club?.name ?? "Club"} — MUICT Clubs` },
+      { name: "description", content: loaderData?.club?.description ?? "MUICT club" },
+      { property: "og:title", content: `${loaderData?.club?.name ?? "Club"} — MUICT Clubs` },
+      { property: "og:description", content: loaderData?.club?.tagline ?? "" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -31,16 +31,20 @@ const schema = z.object({
 });
 
 function ClubPage() {
-  const { club } = Route.useLoaderData();
+  const { clubId } = Route.useParams();
+  const { clubs, ready } = useClubs();
+  const club = clubs.find((item) => item.id === clubId);
   const regs = useRegistrations();
-  const existing = regs.find((r) => r.clubId === club.id);
-  const memberCount = regs.filter((r) => r.clubId === club.id).length;
-  const spotsLeft = Math.max(club.capacity - memberCount, 0);
+  const [submittedStudentId, setSubmittedStudentId] = useState<string | null>(null);
+  const existing = regs.find((r) => r.clubId === clubId && r.studentId === submittedStudentId);
+  const memberCount = regs.filter((r) => r.clubId === clubId).length;
+  const spotsLeft = Math.max((club?.capacity ?? 0) - memberCount, 0);
   const [form, setForm] = useState({ name: "", studentId: "", email: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!club) return;
     const res = schema.safeParse(form);
     if (!res.success) {
       const errs: Record<string, string> = {};
@@ -54,7 +58,15 @@ function ClubPage() {
       return;
     }
     setErrors({});
+    setSubmittedStudentId(res.data.studentId);
   };
+
+  if (!ready || !club) return (
+    <div className="min-h-screen"><SiteHeader /><main className="mx-auto max-w-6xl px-6 py-12">
+      <h1 className="font-display text-3xl font-bold">{!ready ? "Loading club…" : "Club not found"}</h1>
+      {ready && <Link to="/" className="mt-4 inline-block text-primary hover:underline">Browse all clubs</Link>}
+    </main></div>
+  );
 
   const info = [
     ["Meets", club.meets],
@@ -85,6 +97,9 @@ function ClubPage() {
         </div>
 
         <aside className="h-fit rounded-2xl border border-border bg-card p-7 shadow-card lg:sticky lg:top-24">
+          <div role="status" className={`mb-4 rounded-lg px-3 py-2 text-sm ${spotsLeft === 0 ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground"}`}>
+            {memberCount} / {club.capacity} members · {spotsLeft === 0 ? "This club is full." : `${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left`}
+          </div>
           {existing ? (
             <div>
               <div className="text-3xl">🎉</div>
@@ -96,7 +111,10 @@ function ClubPage() {
                 <Link to="/my-clubs" className="rounded-lg bg-primary px-4 py-2.5 text-center font-medium text-primary-foreground hover:opacity-90">
                   View my clubs
                 </Link>
-                <button onClick={() => removeRegistration(club.id)} className="rounded-lg border border-border px-4 py-2.5 text-sm text-destructive hover:bg-muted">
+                <button onClick={() => { setSubmittedStudentId(null); setForm({ name: "", studentId: "", email: "" }); }} className="rounded-lg border border-border px-4 py-2.5 text-sm hover:bg-muted">
+                  Register another student
+                </button>
+                <button onClick={() => removeRegistration(club.id, existing.studentId)} className="rounded-lg border border-border px-4 py-2.5 text-sm text-destructive hover:bg-muted">
                   Cancel registration
                 </button>
               </div>
@@ -104,10 +122,8 @@ function ClubPage() {
           ) : (
             <form onSubmit={submit} className="space-y-4">
               <h2 className="font-display text-2xl font-bold">Register</h2>
-              <div className={`rounded-lg px-3 py-2 text-sm ${spotsLeft === 0 ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground"}`}>
-                {spotsLeft === 0 ? "This club is full." : `${memberCount} / ${club.capacity} members · ${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left`}
-              </div>
-              {errors.form && <p className="text-sm text-destructive">{errors.form}</p>}
+              <p className="text-sm text-muted-foreground">One registration per student per club. Places are limited to {club.capacity} members.</p>
+              {errors["form"] && <p role="alert" className="text-sm text-destructive">{errors["form"]}</p>}
               {([
                 ["name", "Full name", "text"],
                 ["studentId", "Student ID", "text"],
@@ -117,6 +133,7 @@ function ClubPage() {
                   <span className="text-sm font-medium">{label}</span>
                   <input
                     type={type}
+                    disabled={spotsLeft === 0}
                     value={form[key]}
                     onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-ring"
